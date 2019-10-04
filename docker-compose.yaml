@@ -1,0 +1,22 @@
+version: '3'
+services:
+  browserless:
+    image: icedrunkard/browserless:latest
+    restart: always
+    ports:
+      - 4001:3000
+    environment:
+      # MAX_CONCURRENT_SESSIONS是控制浏览器并发度的
+      - CONNECTION_TIMEOUT=180000
+      - MAX_CONCURRENT_SESSIONS=10
+      - PREBOOT_CHROME=true
+      - KEEP_ALIVE=true
+  server:
+    build:
+      context: .
+    image: icedrunkard/awesome_login:v1
+    restart: always
+    depends_on:
+      - browserless
+    ports:
+      - 4002:4002

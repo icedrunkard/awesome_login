@@ -22,13 +22,12 @@ async def login(request):
         try:
             res = await Mail163.res_from_instance(username,password,proxies=proxies)
             print(res)
-            text = json.dumps(res,ensure_ascii=False)
-            return web.json_response(status=200,text=text)
+            return web.json_response(status=200,data=res)
         except Exception as e:
             err = str((type(e),e))
             print(err)
-            text = json.dumps({'status': 'unknown_err', 'cookies': []},ensure_ascii=False)
-            return web.json_response(status=500, text=text)
+            data = {'status': 'unknown_err', 'cookies': [], 'err':err}
+            return web.json_response(status=500, data=data)
     else:
-        text = json.dumps({'status': 'param_err', 'cookies': []}, ensure_ascii=False)
-        return web.json_response(status=500, text=text)
+        data = {'status': 'param_err', 'cookies': []}
+        return web.json_response(status=500, data=data)

@@ -22,12 +22,10 @@ async def login(request):
         email_pwd = obj.get('email_pwd')
         proxies = obj.get('proxies')
         try:
-            cookiesld = await Linkedin.res_from_instance(username, password, email, email_pwd, proxies=proxies)
-            print(cookiesld)
-            if isinstance(cookiesld, list):
-                text = json.dumps(cookiesld, ensure_ascii=False)
-                return web.Response(status=200, text=text)
-            return web.Response(status=500, text=str(cookiesld))
+            data = await Linkedin.res_from_instance(username, password, email, email_pwd, proxies=proxies)
+            if isinstance(data, dict) and data.get('status') == 'login_success':
+                return web.json_response(status=200, data=data)
+            return web.json_response(status=500, data=data)
         except Exception as e:
             print(e)
             return web.Response(status=500, text=str(e))

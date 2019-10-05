@@ -33,13 +33,15 @@ MAIL163_ENGINE = 'http://localhost:4002/mail163_login'
 LINKEIN_ENGINE = 'http://localhost:4002/linkedin_login'
 LOCAL_ENGINE='local'
 # PYPPETEER_ENGINE 是表示浏览器如何连接的选项，docker里browserless/chrome,本地的local
-PYPPETEER_ENGINE=BROWSERLESS_ENGINE
+PYPPETEER_ENGINE=LOCAL_ENGINE
 CONCURRENT_TASKS_OR_FUTURES = 5
 # IS_MOBILE 表示浏览器是模拟电脑版还是手机版
+LINKEDIN_IS_MOBILE = False
 IS_MOBILE=False
 # PROXY_TYPE 表示浏览器所用代理是何种类型，local表示无代理，remote表示使用代理
 PROXY_TYPE='local'
 USE_MITMPROXY=False
+LINKEDIN_USER_AGENT = ua if LINKEDIN_IS_MOBILE else ua_pc
 USER_AGENT= ua if IS_MOBILE else ua_pc
 
 # 联众打码平台 https://www.jsdati.com/

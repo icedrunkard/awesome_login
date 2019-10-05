@@ -33,7 +33,7 @@ class BaseClient:
     @staticmethod
     def handled_options(proxies, engine):
         args = [
-            '--window-size=800,800',
+            '--window-size=900,900',
             '--safebrowsing-disable-download-protection',
             '--no-sandbox',
         ]
@@ -86,13 +86,13 @@ class BaseClient:
         # if page_name == 'page':
         #     print(self.page)
         await page.setBypassCSP(True)
-        page.setDefaultNavigationTimeout(30000)
+        page.setDefaultNavigationTimeout(60000)
         if page_name == 'page':
             for _p in await self.browser.pages():
                 if _p != page:
                     await _p.close()
         await self.injectjs(page_name)
-        await page.setViewport(viewport={'width': 800, 'height': 800, 'isMobile': self.is_mobile})
+        await page.setViewport(viewport={'width': 900, 'height': 900, 'isMobile': self.is_mobile})
         print('is_mobile: ', self.is_mobile)
         print(USER_AGENT)
 

@@ -1,12 +1,13 @@
 # coding=utf-8
 # python 3.7
-from util.preload import *
-from util.settings import *
 import asyncio
 import pyppeteer
 import random
 import time
 import requests
+from aiohttp import ClientSession
+from util.preload import *
+from util.settings import *
 from .tools import check_latest_linkedin_code
 
 __author__ = 'icedrunkard'
@@ -17,7 +18,7 @@ semaphore = asyncio.Semaphore(CONCURRENT_TASKS_OR_FUTURES)
 class Linkedin:
 
     def __init__(self, username: str, password: str, email: str, email_pwd: str, proxies=None,
-                 is_mobile=IS_MOBILE, engine=PYPPETEER_ENGINE, mail_engine=MAIL163_ENGINE):
+                 is_mobile=LINKEDIN_IS_MOBILE, engine=PYPPETEER_ENGINE, mail_engine=MAIL163_ENGINE):
         assert isinstance(username, str)
         assert isinstance(password, str)
         assert len(username) and len(password)
@@ -33,7 +34,7 @@ class Linkedin:
     @staticmethod
     def handled_options(proxies, engine):
         args = [
-            '--window-size=800,800',
+            '--window-size=900,900',
             '--safebrowsing-disable-download-protection',
             '--no-sandbox',
         ]
@@ -81,14 +82,14 @@ class Linkedin:
     async def get_page(self):
         self.page = await self.browser.newPage()
         await self.page.setBypassCSP(True)
-        self.page.setDefaultNavigationTimeout(30000)
+        self.page.setDefaultNavigationTimeout(60000)
         for _p in await self.browser.pages():
             if _p != self.page:
                 await _p.close()
         await self.injectjs()
-        await self.page.setViewport(viewport={'width': 800, 'height': 800, 'isMobile': self.is_mobile})
+        await self.page.setViewport(viewport={'width': 900, 'height': 900, 'isMobile': self.is_mobile})
         print('is_mobile: ', self.is_mobile)
-        print(USER_AGENT)
+        print(LINKEDIN_USER_AGENT)
 
     async def quit(self):
         if self.options.get('executablePath'):
@@ -118,7 +119,7 @@ class Linkedin:
         # plugins
         await self.page.evaluateOnNewDocument(js7)
         # useragent
-        await self.page.setUserAgent(USER_AGENT)
+        await self.page.setUserAgent(LINKEDIN_USER_AGENT)
 
         if self.is_mobile:
             # platform
@@ -211,10 +212,23 @@ class Linkedin:
         elif '您的帐号受到了限制' in text:
             return 'user_forbidden'
         elif '/voyager/api/identity/profiles' in text:
+            url = 'https://www.linkedin.com/in/yiming-zhang-7a7841b/'
+            tasks_check = [
+                asyncio.ensure_future(self.page.goto(url)),
+                asyncio.ensure_future(self.page.waitForNavigation()),
+            ]
+            done, pending = await asyncio.wait(tasks_check)
+            for each in done:
+                if each.exception():
+                    print(each._coro.__name__, each.exception())
             return 'login_success'
         elif 'check/manage-account' in self.page.url:
+            btn = await self.page.waitForSelector('#password-prompt-wrapper > button')
+            await btn.click()
+            await self.page.waitForRequest(lambda r: '/voyager/api/' in r.url)
+            url = 'https://www.linkedin.com/in/yiming-zhang-7a7841b/'
             tasks_check = [
-                asyncio.ensure_future(self.page.click('button.primary-action')),
+                asyncio.ensure_future(self.page.goto(url)),
                 asyncio.ensure_future(self.page.waitForNavigation()),
             ]
             done, pending = await asyncio.wait(tasks_check)
@@ -245,18 +259,33 @@ class Linkedin:
                 print('unknown_status_3')
                 return 'unknown_status_3'
 
+    async def page_status(self):
+        t0 = time.time()
+        while time.time() - t0 < 90:
+            try:
+                _page_status = await self._page_status()
+                if _page_status in ['login_success', 'email_check','user_forbidden']:
+                    await asyncio.sleep(3)
+                    return _page_status
+            except Exception as e:
+                print('page_status:',type(e),e,)
+                await asyncio.sleep(3)
+
     async def res_after_click_login(self):
+        if self.is_mobile:
+            btn_selector = '#app__container > main > div > div.main-content__wrapper--mobile > form > div.login__form_action_container > button'
+        else:
+            btn_selector = '#app__container > main > div > form > div.login__form_action_container > button'
         tasks_navigate = [
-            asyncio.ensure_future(self.page.click(
-                '#app__container > main > div > form > div.login__form_action_container > button')),
+            asyncio.ensure_future(self.page.click(btn_selector)),
             asyncio.ensure_future(self.page.waitForNavigation()),
         ]
         done, pending = await asyncio.wait(tasks_navigate)
         for each in done:
             if each.exception():
                 print(each._coro.__name__, each.exception())
-        _page_status = await self._page_status()
-        return _page_status
+        page_status = await self.page_status()
+        return page_status
 
     async def gen_all_cookies(self):
         try:
@@ -284,9 +313,11 @@ class Linkedin:
             return obj
         elif page_status == 'email_check':
             payload = {"username": self.email, "password": self.email_pwd, "proxies": self.proxies}
+            print('need to login mail:',self.mail_engine,payload)
             try:
-                r = requests.post(self.mail_engine, json=payload)
-                mail_obj = r.json()
+                async with ClientSession() as session:
+                    r = await session.request(method='POST',url=self.mail_engine,json=payload)
+                    mail_obj = await r.json()
             except Exception as e:
                 err = str((type(e), e))
                 print(err)

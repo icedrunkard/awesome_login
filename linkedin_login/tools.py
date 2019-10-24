@@ -84,7 +84,7 @@ def code_from_session_post(session, url, dtype='code') -> Union[str, None]:
             if '领英' not in sender:
                 # 标题没有领英，说明不是领英验证码
                 return
-            elif timestamp < time.time():
+            elif timestamp < time.time()-60:
                 print('验证码还没到，请稍后再试')
                 return 'code_not_arrived'
             else:
@@ -98,7 +98,7 @@ def code_from_session_post(session, url, dtype='code') -> Union[str, None]:
         _headers.pop('Content-type')
         r_detail = session.get(url, headers=_headers, )
         text = r_detail.text.replace('"', '_')
-        code_r = re.search('请用此验证码完成登录步骤: (\d{6})', text)
+        code_r = re.search('请用此验证码完成登录步骤.{0,20}(\d{6})', text)
         # 页面中有数字验证码
         if code_r:
             if '领英' not in text:

@@ -7,10 +7,11 @@ services:
       - 4001:3000
     environment:
       # MAX_CONCURRENT_SESSIONS是控制浏览器并发度的
-      - CONNECTION_TIMEOUT=180000
-      - MAX_CONCURRENT_SESSIONS=10
+      - CONNECTION_TIMEOUT=600000
+      - MAX_CONCURRENT_SESSIONS=100
       - PREBOOT_CHROME=true
       - KEEP_ALIVE=true
+      - ENABLE_CORS=true
   server:
     build:
       context: .
